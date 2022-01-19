@@ -338,7 +338,7 @@ print("POLICY ITERATION\n")
 # as the first step for the next policy evaluation
 
 
-def policy_improvement(v):
+def policy_improvement(v, cache=[None]):
     """
     V : float array, size (env.nS,)
     Value function of a policy
@@ -348,10 +348,25 @@ def policy_improvement(v):
     pi : int array, size (env.nS,)
     A policy that is greedy with respect to V
     """
+    if cache[0] is None:
+        P = np.zeros((env.nA, env.nS, env.nS)) # Transition matrix, see slide 37 of the lecture "ShortLecture_MDPControl"
+        m = np.zeros((env.nA, env.nS))
+        for state, state_possiblities in env.P.items():
+            for action in range(env.nA):
+                for possibility in state_possiblities[action]: 
+                    proba, next_state, reward, done = possibility
+                    m[action, state] += reward * proba
+                    P[action, state, next_state] += proba
+        data = (P, m)
+        cache[0] =  data
+    else :
+        P, m = cache[0]
+        
+    pi = np.argmax(m + GAMMA * P @ v, axis=0)
     return pi
 
 
-def policy_iteration(max_iter):
+def policy_iteration(epsilon, max_iter):
     """
     epsilon : float
     Used as a threshold for the stopping rule
@@ -364,15 +379,28 @@ def policy_iteration(max_iter):
     pi : int array, size (env.nS,)
     An optimal policy
     """
-    return pi
+    V_opt = np.zeros(env.nS)
+    pi_opt = np.zeros(env.nS, dtype=int)
+    
+    for _ in range(max_iter):
+        pi_old = pi_opt
+        # ----------------------------- policy evaluation ---------------------------- #
+        V_opt, _ = value_function_2(pi_opt, epsilon, max_iter)
+        # ---------------------------- policy improvement ---------------------------- #
+        pi_opt = policy_improvement(V_opt)
+        
+        if np.all(pi_old==pi_opt):
+            break
+    return pi_opt
 
 
 starting_time = perf_counter()
-Pi_opt = policy_iteration(1000)
+Pi_opt = policy_iteration(1e-40, 1000)
 print(convert_time(starting_time, perf_counter()))
 print("An optimal policy is:\n")
 print_policy(Pi_opt)
 
+# %%
 # pdb.set_trace()
 # Question 11
 print("\n#######################")
@@ -396,14 +424,35 @@ def state_value_function_optimal(epsilon, max_iter):
     given a discount GAMMA
     q_opt[state index][action index] = state-action value of that state
     """
-    return q_opt, delta_inf
+    P = np.zeros((env.nA, env.nS, env.nS)) # Transition matrix, see slide 37 of the lecture "ShortLecture_MDPControl"
+    m = np.zeros((env.nA, env.nS))
+    for state, state_possiblities in env.P.items():
+        for action in range(env.nA):
+            for possibility in state_possiblities[action]: 
+                proba, next_state, reward, done = possibility
+                m[action, state] += reward * proba
+                P[action, state, next_state] += proba
+    
+    q_opt = np.zeros((env.nA, env.nS))
+    delta_inf = []
+    for _ in range(max_iter):
+        q_old = q_opt
+        # ------------------------- Optimal Bellman operator ------------------------- #
+        q_opt = m + GAMMA * P @ np.max(q_opt, axis=0)
+        # --------------------------- difference evaluation -------------------------- #
+        diff = np.max(np.abs(q_old - q_opt))
+        delta_inf.append(diff)
+        if diff < epsilon:
+            break
+    
+    return q_opt.T, np.array(delta_inf)
 
 
 starting_time = perf_counter()
 Q_opt, Delta_inf = state_value_function_optimal(1e-4, 100)
 print(convert_time(starting_time, perf_counter()))
 # print(Q_opt)
-V_opt = None
+V_opt = np.max(Q_opt, axis=1) 
 print(f"Optimal value function:\n")
 print_values(V_opt)
 
@@ -417,6 +466,7 @@ plt.savefig('question11.png')
 print(f"\nNumber of iterations: {Delta_inf.size}")
 print(f"Last residual {Delta_inf[-1]:.6f}")
 
+# %%
 # Question 12
 print("\n#######################")
 print("##### Question 12 #####")

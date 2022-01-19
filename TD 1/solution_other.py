@@ -506,6 +506,7 @@ def trajectory(pi, max_moves=20):
     done = False
     i = 0
     env.reset()
+    env.reset()
     cumulative_reward = 0
     discount = 1
     while not done and i < max_moves:
