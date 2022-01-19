@@ -107,7 +107,7 @@ def value_function(pi):
         for possibility in state_possiblities[action]: 
             proba, next_state, reward, done = possibility
             m[state] += reward * proba
-            P[state, next_state] = proba
+            P[state, next_state] += proba
 
     return np.linalg.solve(np.eye(env.nS)- GAMMA * P, m)
 
@@ -156,7 +156,7 @@ def value_function_2(pi, epsilon, max_iter):
         for possibility in state_possiblities[action]: 
             proba, next_state, reward, done = possibility
             m[state] += reward * proba
-            P[state, next_state] = proba
+            P[state, next_state] += proba
 
     delta_inf = []
     for _ in range(max_iter):
@@ -218,7 +218,7 @@ def value_function_optimal(epsilon, max_iter):
             for possibility in state_possiblities[action]: 
                 proba, next_state, reward, done = possibility
                 m[action, state] += reward * proba
-                P[action, state, next_state] = proba
+                P[action, state, next_state] += proba
 
     delta_inf = []
     for _ in range(max_iter):
@@ -280,7 +280,7 @@ def value_iteration(epsilon, max_iter):
             for possibility in state_possiblities[action]: 
                 proba, next_state, reward, done = possibility
                 m[action, state] += reward * proba
-                P[action, state, next_state] = proba
+                P[action, state, next_state] += proba
 
     delta_inf = []
     for _ in range(max_iter):
