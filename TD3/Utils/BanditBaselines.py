@@ -15,7 +15,7 @@ class FTL:
 
     def chooseArmToPlay(self):
         if (min(self.nbDraws)==0):
-            return randmax(-self.nbDraws)
+            return randmax(-self.nbDraws) # Means, return one arm that have never been drawn before
         else:
             return randmax(self.cumRewards/self.nbDraws)
 
