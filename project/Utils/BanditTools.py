@@ -13,10 +13,10 @@ class Scheduler:
     def __init__(self, list):
         self.list = list
         self.index = 0
-        self.time = 1
+        self.time = 0
     def restore(self):
         self.index = 0
-        self.time = 1
+        self.time = 0
     def get(self):
         return self.list[self.index] 
     def next_bandits(self):
@@ -24,7 +24,7 @@ class Scheduler:
         T = self.get()
         if self.time == T:
             self.index = (self.index + 1) % len(self.list)
-            self.time = 1
+            self.time = 0
             return True
         else:
             return False

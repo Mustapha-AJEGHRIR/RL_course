@@ -1,4 +1,3 @@
-import statistics
 import numpy as np
 import Arms as arms
 from BanditTools import Scheduler
@@ -8,9 +7,11 @@ class MAB_NON_S:
     """Non-stationary MAB"""
     def __init__(self, k=3,
                 distribution= "bernoulli",
-                seed = 42,
+                seed = None,
                 TS = [1000], # T's for which distribution is changed. will loop over TS  periodically 
                 ):
+        self.seed = seed
+        np.random.seed(self.seed)
         self.historical_means = []
         self.historical_arms = []
         self.historical_rewards = []
@@ -18,17 +19,20 @@ class MAB_NON_S:
         self.distribution = distribution
         self.nbArms = k
         self.scheduler = Scheduler(TS)
-
         self.generate_distributions()
+
     def restore(self):
         """
         The function restores the scheduler and the historical data
         """
-        self.scheduler.restore()
+        np.random.seed(self.seed)
         self.historical_means = []
         self.historical_arms = []
         self.historical_rewards = []
         self.pseudoRegret = []
+        self.scheduler.restore()
+        self.generate_distributions()
+
     def generate_distributions(self):
         """
         Generate the means randomly and the distributions
@@ -43,9 +47,9 @@ class MAB_NON_S:
             raise ValueError("Distribution not supported") 
     def generateReward(self, arm):
         reward = self.arms[arm].sample()
-        self.historical_arms(arm)
-        self.historical_rewards(reward)
-        self.historical_means(self.means)
+        self.historical_arms.append(arm)
+        self.historical_rewards.append(reward)
+        self.historical_means.append(self.means)
         self.pseudoRegret.append(np.max(self.means) - self.means[arm])
         
         change = self.scheduler.next_bandits() # check wether we need to change the bandits
@@ -54,7 +58,7 @@ class MAB_NON_S:
         
         return reward
     # ------------------------------ Use statistics ------------------------------ #
-    def CumulativeRegret(self):
+    def cumulativeRegret(self):
         """
         Compute the Cumulative pseudo Regret, not the regret ! 
         """
