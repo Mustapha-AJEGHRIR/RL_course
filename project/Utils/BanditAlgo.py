@@ -102,7 +102,7 @@ class SW_UCB:
         return randmax(self.indexes)
 
     def receiveReward(self, arm, reward):
-        self.time = self.time + 1
+        self.time = min(self.time + 1, self.buffer_size)
         self.draws.add(arm, reward)
         self.cumRewards = self.draws.get_cum_rewards()
         self.nbDraws = self.draws.get_nb_draws()
