@@ -170,7 +170,5 @@ def complexity(bandit):
     else: 
         return sum([(meanMax - bandit.means[a])/klBern(bandit.means[a],meanMax) for a in range(bandit.nbArms) if a!=bandit.bestarm])
 
-        
-
-    
-        
+def deviation(n, delta):
+    return np.sqrt(2*(1+1/n)*(np.log(np.sqrt(n+1)/delta)/n))
