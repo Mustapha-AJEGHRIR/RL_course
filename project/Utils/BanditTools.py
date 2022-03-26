@@ -6,6 +6,44 @@ Useful functions for bandit algorithms (especially KL-UCB)
 from math import log, sqrt, exp
 import numpy as np
 
+class DrawsBuffer:
+    def __init__(self, nbArms, size):
+        self.size = size
+        self.nbArms = nbArms
+        self.buffer_arm = np.zeros(size, dtype=np.int32) - 1 # -1 means not initialized
+        self.buffer_reward = np.zeros(size)
+
+        self.draws = np.zeros(nbArms, dtype=np.int32)
+        self.cumRewards = np.zeros(nbArms)
+        self.index = 0
+    def get_nb_draws(self):
+        return self.draws
+    def get_cum_rewards(self):
+        return self.cumRewards
+    def old(self):
+        return self.buffer_arm[self.index], self.buffer_reward[self.index]
+    def add(self, arm, reward):
+        old_arm, old_reward = self.old()
+        if old_arm == -1:
+            self.buffer_arm[self.index] = arm
+            self.buffer_reward[self.index] = reward
+        else:
+            self.buffer_arm[self.index] = arm
+            self.buffer_reward[self.index] = reward
+            self.draws[old_arm] -= 1
+            self.cumRewards[old_arm] -= old_reward
+        self.draws[arm] += 1
+        self.cumRewards[arm] += reward
+        self.index = (self.index + 1) % self.size
+    def __len__(self):
+        return self.nbArms
+    def __getitem__(self, key):
+        return self.draws[key], self.cumRewards[key]
+    def __str__(self):
+        return "Draws = " + str(self.draws) + "\nCumRewards = "+  str(self.cumRewards)
+        
+
+
 class Scheduler:
     """
     cheks if it is time change the distibution of bandits for the Non stationary bandits
