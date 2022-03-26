@@ -81,6 +81,105 @@ class UCB:
     def name(self):
         return "UCB"
 
+# class UCB:
+#     """Upper Confidence Bound"""
+
+#     def __init__(self, nbArms, delta):
+#         self.nbArms = nbArms
+#         self.delta = delta
+#         self.clear()
+
+#     def clear(self):
+#         self.time = 0
+#         self.nbDraws = np.zeros(self.nbArms)
+#         self.cumRewards = np.zeros(self.nbArms)
+#         self.means = np.zeros(self.nbArms)
+#         self.indexes = np.zeros(self.nbArms)
+
+#     def chooseArmToPlay(self):
+#         return randmax(self.indexes)
+
+#     def receiveReward(self, arm, reward):
+#         self.time = self.time + 1
+#         self.cumRewards[arm] = self.cumRewards[arm]+reward
+#         self.nbDraws[arm] = self.nbDraws[arm] + 1
+#         self.means[arm] = self.cumRewards[arm] / self.nbDraws[arm]
+
+#         self.indexes = [self.means[a] + sqrt(log(1/self.delta(self.time))/(
+#             2*self.nbDraws[a])) if self.nbDraws[a] > 0 else np.Inf for a in range(self.nbArms)]
+
+#     def name(self):
+#         return "UCB"
+
+
+class KL_UCB:
+    """kullback leibler Upper Confidence Bound"""
+
+    def __init__(self, nbArms, delta, klucb=klucbBern, c=1, tolerance=1e-4):
+        self.nbArms = nbArms
+        self.delta = delta
+        self.klucb_vect = np.vectorize(klucb)
+        self.c = c
+        self.tolerance = tolerance
+        self.clear()
+
+    def clear(self):
+        self.time = 0
+        self.nbDraws = np.zeros(self.nbArms)
+        self.cumRewards = np.zeros(self.nbArms)
+        self.means = np.zeros(self.nbArms)
+        self.indexes = np.zeros(self.nbArms)
+
+    def chooseArmToPlay(self):
+        return randmax(self.indexes)
+
+    def receiveReward(self, arm, reward):
+        self.time = self.time + 1
+        self.cumRewards[arm] = self.cumRewards[arm]+reward
+        self.nbDraws[arm] = self.nbDraws[arm] + 1
+        self.means[arm] = self.cumRewards[arm] / self.nbDraws[arm]
+
+        self.indexes = self.klucb_vect(
+            self.cumRewards / self.nbDraws, self.c * np.log(self.time) / self.nbDraws, self.tolerance)
+        self.indexes[self.nbDraws < 1] = float('+inf')
+
+    def name(self):
+        return "KL_UCB"
+
+
+class R_UCB:
+    """Refreshed Upper Confidence Bound"""
+
+    def __init__(self, nbArms, delta, period):
+        self.nbArms = nbArms
+        self.delta = delta
+        self.period = period
+        self.clear()
+
+    def clear(self):
+        self.time = 0
+        self.nbDraws = np.zeros(self.nbArms)
+        self.cumRewards = np.zeros(self.nbArms)
+        self.means = np.zeros(self.nbArms)
+        self.indexes = np.zeros(self.nbArms)
+
+    def chooseArmToPlay(self):
+        return randmax(self.indexes)
+
+    def receiveReward(self, arm, reward):
+        if self.time == self.period:
+            self.clear()
+        self.time = self.time + 1
+        self.cumRewards[arm] = self.cumRewards[arm]+reward
+        self.nbDraws[arm] = self.nbDraws[arm] + 1
+        self.means[arm] = self.cumRewards[arm] / self.nbDraws[arm]
+
+        self.indexes = [self.means[a] + sqrt(log(1/self.delta(self.time))/(
+            2*self.nbDraws[a])) if self.nbDraws[a] > 0 else np.Inf for a in range(self.nbArms)]
+
+    def name(self):
+        return "R_UCB"
+
 
 class SW_UCB:
     """Sliding Window Upper Confidence Bound"""
