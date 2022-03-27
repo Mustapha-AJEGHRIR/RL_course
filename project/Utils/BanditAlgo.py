@@ -139,7 +139,7 @@ class KL_NS_UCB:
         self.time = self.time + 1
         self.cumRewards[arm] = self.cumRewards[arm]+reward
         self.nbDraws[arm] = self.nbDraws[arm] + 1
-        self.means[arm] = self.cumRewards[arm] / self.nbDraws[arm]
+        self.means[arm] = self.cumRewards[arm] / (self.nbDraws[arm] + 1e-10)
 
         self.indexes = self.klucb_vect(
             self.cumRewards / self.nbDraws, self.c * np.log(self.time) / self.nbDraws, self.tolerance)
@@ -147,6 +147,71 @@ class KL_NS_UCB:
 
     def name(self):
         return "KL_NS_UCB"
+
+class NS_UCB:
+    """kullback leibler non stationary Upper Confidence Bound"""
+
+    def __init__(self, nbArms, delta, buffer_size, klucb=klucbBern, c=1, tolerance=1e-4):
+        assert buffer_size > nbArms, "The buffer size should be bigger than the number of arms"
+        self.nbArms = nbArms
+        self.delta = delta
+        self.buffer_size = buffer_size
+        self.klucb_vect = np.vectorize(klucb)
+        self.c = c
+        self.tolerance = tolerance
+        self.clear()
+    
+    def test(self):
+        last_nbDraws = self.buffer.get_nb_draws()
+        last_cumRewards = self.buffer.get_cum_rewards()
+        last_means = np.zeros(self.nbArms)
+
+        old_cumRewards = self.cumRewards - last_cumRewards
+        old_nbDraws = self.nbDraws - last_nbDraws
+        old_means = old_cumRewards / old_nbDraws
+
+        for arm in range(self.nbArms):
+            if last_nbDraws[arm] > 0:
+                last_means[arm] = last_cumRewards[arm] / last_nbDraws[arm]
+            else :
+                last_means[arm] = self.means[arm]
+        # Lets only monitor the most frequent arms we have seen
+        Z = np.abs(last_means - old_means)
+        delta = 1
+        Z -= deviation(last_nbDraws + 0.1, delta)*1
+        Z -= deviation(old_nbDraws + 0.1, delta)*1
+
+        T = np.max(Z)
+        return T >= 0 # If true, we should change the distribution
+
+    def clear(self):
+        self.time = 0
+        self.buffer = DrawsBuffer(self.nbArms, self.buffer_size)
+        self.nbDraws = np.zeros(self.nbArms)
+        self.cumRewards = np.zeros(self.nbArms)
+        self.means = np.zeros(self.nbArms)
+        self.indexes = np.zeros(self.nbArms)
+
+    def chooseArmToPlay(self):
+        return randmax(self.indexes)
+
+    def receiveReward(self, arm, reward):
+        if self.time > self.buffer_size*2 and self.time % 10 == 0:  
+            new_dist = self.test()
+            if new_dist:
+                # print(" _ time=", self.time , end="")
+                self.clear()
+        self.buffer.add(arm, reward)
+        self.time = self.time + 1
+        self.cumRewards[arm] = self.cumRewards[arm]+reward
+        self.nbDraws[arm] = self.nbDraws[arm] + 1
+        self.means[arm] = self.cumRewards[arm] / (self.nbDraws[arm] + 1e-10)
+
+        self.indexes = [self.means[a] + sqrt(log(1/self.delta(self.time))/(
+            2*self.nbDraws[a])) if self.nbDraws[a] > 0 else np.Inf for a in range(self.nbArms)]
+
+    def name(self):
+        return "NS_UCB"
 
 class KL_UCB:
     """kullback leibler Upper Confidence Bound"""
@@ -185,12 +250,13 @@ class KL_UCB:
 class R_KL_UCB:
     """Refreshed kullback leibler Upper Confidence Bound"""
 
-    def __init__(self, nbArms, delta, klucb=klucbBern, c=1, tolerance=1e-4):
+    def __init__(self, nbArms, delta, period, klucb=klucbBern, c=1, tolerance=1e-4):
         self.nbArms = nbArms
         self.delta = delta
         self.klucb_vect = np.vectorize(klucb)
         self.c = c
         self.tolerance = tolerance
+        self.period = period
         self.clear()
 
     def clear(self):
@@ -209,7 +275,7 @@ class R_KL_UCB:
         self.time = self.time + 1
         self.cumRewards[arm] = self.cumRewards[arm]+reward
         self.nbDraws[arm] = self.nbDraws[arm] + 1
-        self.means[arm] = self.cumRewards[arm] / self.nbDraws[arm]
+        self.means[arm] = self.cumRewards[arm] / (self.nbDraws[arm] + 1e-10)
 
         self.indexes = self.klucb_vect(
             self.cumRewards / self.nbDraws, self.c * np.log(self.time) / self.nbDraws, self.tolerance)
@@ -253,7 +319,6 @@ class SW_KL_UCB:
 
     def name(self):
         return "SW_KL_UCB"
-
 
 class R_UCB:
     """Refreshed Upper Confidence Bound"""
